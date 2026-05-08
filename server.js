@@ -6,41 +6,10 @@ const { exec } = require("child_process")
 const app = express()
 
 app.use(cors())
-app.use(express.json())
 
 app.get("/", (req, res) => {
-    res.send("Multi Downloader API jalan")
+    res.send("API TikTok jalan")
 })
-
-async function downloadMedia(url, type, req, res) {
-
-    const id = Date.now()
-
-    const videoFile = `/tmp/${type}_${id}.mp4`
-    const audioFile = `/tmp/${type}_${id}.mp3`
-
-    exec(
-        `yt-dlp -f "bestvideo+bestaudio/best" --merge-output-format mp4 "${url}" -o "${videoFile}" && yt-dlp -x --audio-format mp3 "${url}" -o "${audioFile}"`,
-        (err) => {
-
-            if (err) {
-                return res.json({
-                    status: false,
-                    error: err.toString()
-                })
-            }
-
-            res.json({
-                status: true,
-                platform: type,
-                video_hd: `https://${req.get("host")}/download/${type}_${id}.mp4`,
-                mp3: `https://${req.get("host")}/download/${type}_${id}.mp3`
-            })
-
-        }
-    )
-
-}
 
 app.get("/tiktok", async (req, res) => {
 
@@ -53,67 +22,48 @@ app.get("/tiktok", async (req, res) => {
         })
     }
 
-    downloadMedia(url, "tiktok", req, res)
+    const id = Date.now()
 
-})
+    const videoName = `video_${id}.mp4`
+    const audioName = `audio_${id}.mp3`
 
-app.get("/instagram", async (req, res) => {
+    const videoFile = `/tmp/${videoName}`
+    const audioFile = `/tmp/${audioName}`
 
-    const url = req.query.url
+    exec(
+        `yt-dlp -f "bestvideo+bestaudio/best" --merge-output-format mp4 -o "${videoFile}" "${url}" && yt-dlp -x --audio-format mp3 -o "${audioFile}" "${url}"`,
+        (err) => {
 
-    if (!url) {
-        return res.json({
-            status: false,
-            message: "URL kosong"
-        })
-    }
+            if (err) {
+                return res.json({
+                    status: false,
+                    error: err.toString()
+                })
+            }
 
-    downloadMedia(url, "instagram", req, res)
+            res.json({
+                status: true,
+                video_hd: `https://${req.get("host")}/download/${videoName}`,
+                mp3: `https://${req.get("host")}/download/${audioName}`
+            })
 
-})
-
-app.get("/facebook", async (req, res) => {
-
-    const url = req.query.url
-
-    if (!url) {
-        return res.json({
-            status: false,
-            message: "URL kosong"
-        })
-    }
-
-    downloadMedia(url, "facebook", req, res)
-
-})
-
-app.get("/twitter", async (req, res) => {
-
-    const url = req.query.url
-
-    if (!url) {
-        return res.json({
-            status: false,
-            message: "URL kosong"
-        })
-    }
-
-    downloadMedia(url, "twitter", req, res)
+        }
+    )
 
 })
 
 app.get("/download/:file", (req, res) => {
 
-    const file = `/tmp/${req.params.file}`
+    const filePath = `/tmp/${req.params.file}`
 
-    if (!fs.existsSync(file)) {
+    if (!fs.existsSync(filePath)) {
         return res.json({
             status: false,
             message: "File tidak ditemukan"
         })
     }
 
-    res.download(file)
+    res.download(filePath)
 
 })
 
