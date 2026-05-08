@@ -113,13 +113,7 @@ app.get("/download/:file", (req, res) => {
         })
     }
 
-    res.download(file, () => {
-
-        try {
-            fs.unlinkSync(file)
-        } catch {}
-
-    })
+    res.download(file)
 
 })
 
