@@ -7,67 +7,45 @@ const app = express()
 app.use(cors())
 
 app.get("/", (req, res) => {
-    res.send("TikTok API jalan")
+    res.send("API TikTok jalan")
 })
 
 app.get("/tiktok", async (req, res) => {
 
-    try {
+    const url = req.query.url
 
-        const url = req.query.url
+    if (!url) {
+        return res.json({
+            status: false,
+            message: "URL kosong"
+        })
+    }
 
-        if (!url) {
+    const file = `video_${Date.now()}.mp4`
+
+    exec(`yt-dlp -f "bv*+ba/b" --merge-output-format mp4 -o "${file}" "${url}"`, async (err) => {
+
+        if (err) {
             return res.json({
                 status: false,
-                message: "URL kosong"
+                error: err.toString()
             })
         }
 
-        exec(
-            `yt-dlp -j "${url}"`,
-            { maxBuffer: 1024 * 1024 * 50 },
-
-            (err, stdout) => {
-
-                if (err) {
-                    return res.json({
-                        status: false,
-                        error: err.toString()
-                    })
-                }
-
-                try {
-
-                    const data = JSON.parse(stdout)
-
-                    res.json({
-                        status: true,
-                        title: data.title,
-                        thumbnail: data.thumbnail,
-                        video: data.url,
-                        audio: data.url
-                    })
-
-                } catch (e) {
-
-                    res.json({
-                        status: false,
-                        error: e.toString()
-                    })
-
-                }
-
-            }
-        )
-
-    } catch (e) {
-
         res.json({
-            status: false,
-            error: e.toString()
+            status: true,
+            download: `https://${req.get("host")}/download/${file}`
         })
 
-    }
+    })
+
+})
+
+app.get("/download/:file", (req, res) => {
+
+    const file = req.params.file
+
+    res.download(file)
 
 })
 
