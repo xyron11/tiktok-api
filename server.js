@@ -21,23 +21,30 @@ app.get("/tiktok", async (req, res) => {
         })
     }
 
-    const file = `video_${Date.now()}.mp4`
+    const id = Date.now()
 
-    exec(`yt-dlp -f "bv*+ba/b" --merge-output-format mp4 -o "${file}" "${url}"`, async (err) => {
+    const videoFile = `video_${id}.mp4`
+    const audioFile = `audio_${id}.mp3`
 
-        if (err) {
-            return res.json({
-                status: false,
-                error: err.toString()
+    exec(
+        `yt-dlp -f "bv*+ba/b" --merge-output-format mp4 -o "${videoFile}" "${url}" && yt-dlp -x --audio-format mp3 -o "${audioFile}" "${url}"`,
+        (err) => {
+
+            if (err) {
+                return res.json({
+                    status: false,
+                    error: err.toString()
+                })
+            }
+
+            res.json({
+                status: true,
+                video_hd: `https://${req.get("host")}/download/${videoFile}`,
+                mp3: `https://${req.get("host")}/download/${audioFile}`
             })
+
         }
-
-        res.json({
-            status: true,
-            download: `https://${req.get("host")}/download/${file}`
-        })
-
-    })
+    )
 
 })
 
