@@ -37,18 +37,85 @@ app.get("/tiktok", async (req, res) => {
             })
         }
 
+        const video = result.data.hdplay || result.data.play
+        const audio = result.data.music
+
         res.json({
             status: true,
             title: result.data.title,
             thumbnail: result.data.cover,
 
-            video: {
-                nowm: result.data.play,
-                hd: result.data.hdplay
-            },
-
-            audio: result.data.music
+            download: {
+                video: `https://tiktok-api-production-ff68.up.railway.app/video?url=${encodeURIComponent(video)}`,
+                audio: `https://tiktok-api-production-ff68.up.railway.app/audio?url=${encodeURIComponent(audio)}`
+            }
         })
+
+    } catch (e) {
+
+        res.json({
+            status: false,
+            error: e.toString()
+        })
+
+    }
+
+})
+
+app.get("/video", async (req, res) => {
+
+    try {
+
+        const url = req.query.url
+
+        const response = await fetch(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0"
+            }
+        })
+
+        const buffer = Buffer.from(await response.arrayBuffer())
+
+        res.setHeader("Content-Type", "video/mp4")
+        res.setHeader(
+            "Content-Disposition",
+            "inline; filename=tiktok.mp4"
+        )
+
+        res.send(buffer)
+
+    } catch (e) {
+
+        res.json({
+            status: false,
+            error: e.toString()
+        })
+
+    }
+
+})
+
+app.get("/audio", async (req, res) => {
+
+    try {
+
+        const url = req.query.url
+
+        const response = await fetch(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0"
+            }
+        })
+
+        const buffer = Buffer.from(await response.arrayBuffer())
+
+        res.setHeader("Content-Type", "audio/mpeg")
+        res.setHeader(
+            "Content-Disposition",
+            "inline; filename=tiktok.mp3"
+        )
+
+        res.send(buffer)
 
     } catch (e) {
 
