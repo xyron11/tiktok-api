@@ -37,44 +37,18 @@ app.get("/tiktok", async (req, res) => {
             })
         }
 
-        const video = result.data.hdplay || result.data.play
-
         res.json({
             status: true,
             title: result.data.title,
             thumbnail: result.data.cover,
-            download: `https://tiktok-api-production-ff68.up.railway.app/download?url=${encodeURIComponent(video)}`
+
+            video: {
+                nowm: result.data.play,
+                hd: result.data.hdplay
+            },
+
+            audio: result.data.music
         })
-
-    } catch (e) {
-
-        res.json({
-            status: false,
-            error: e.toString()
-        })
-
-    }
-
-})
-
-app.get("/download", async (req, res) => {
-
-    try {
-
-        const url = req.query.url
-
-        const response = await fetch(url, {
-            headers: {
-                "User-Agent": "Mozilla/5.0"
-            }
-        })
-
-        res.setHeader(
-            "Content-Disposition",
-            "attachment; filename=tiktok.mp4"
-        )
-
-        response.body.pipe(res)
 
     } catch (e) {
 
