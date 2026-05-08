@@ -1,6 +1,6 @@
+
 const express = require("express")
 const cors = require("cors")
-const fetch = require("node-fetch")
 const FormData = require("form-data")
 const fs = require("fs")
 const path = require("path")
@@ -28,23 +28,9 @@ async function uploadCatbox(filePath) {
         body: form
     })
 
-    return await response.text()
-}
+    const result = await response.text()
 
-async function uploadUguu(filePath) {
-
-    const form = new FormData()
-
-    form.append("files[]", fs.createReadStream(filePath))
-
-    const response = await fetch("https://uguu.se/upload.php", {
-        method: "POST",
-        body: form
-    })
-
-    const data = await response.json()
-
-    return data.files[0].url
+    return result
 }
 
 app.get("/tiktok", async (req, res) => {
@@ -75,23 +61,13 @@ app.get("/tiktok", async (req, res) => {
 
         const videoResponse = await fetch(videoUrl)
 
-        const buffer = await videoResponse.buffer()
+        const buffer = Buffer.from(await videoResponse.arrayBuffer())
 
         const filePath = path.join("/tmp", `tiktok_${Date.now()}.mp4`)
 
         fs.writeFileSync(filePath, buffer)
 
-        let uploaded
-
-        try {
-
-            uploaded = await uploadCatbox(filePath)
-
-        } catch {
-
-            uploaded = await uploadUguu(filePath)
-
-        }
+        const uploaded = await uploadCatbox(filePath)
 
         fs.unlinkSync(filePath)
 
@@ -99,6 +75,7 @@ app.get("/tiktok", async (req, res) => {
             status: true,
             title: result.data.title,
             thumbnail: result.data.cover,
+            original_video: videoUrl,
             download: uploaded
         })
 
