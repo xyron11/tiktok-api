@@ -1,53 +1,49 @@
 const express = require("express")
 const cors = require("cors")
-const { exec } = require("child_process")
+const youtubedl = require("yt-dlp-exec")
 
 const app = express()
 
 app.use(cors())
 app.use(express.json())
 
-app.post("/tiktok", (req, res) => {
+app.post("/tiktok", async (req, res) => {
 
-    const url = req.body.url
+    try {
 
-    if (!url) {
-        return res.json({
-            status: false,
-            message: "URL kosong"
-        })
-    }
+        const url = req.body.url
 
-    exec(`yt-dlp -j "${url}"`, (err, stdout) => {
-
-        if (err) {
+        if (!url) {
             return res.json({
                 status: false,
-                error: err.message
+                message: "URL kosong"
             })
         }
 
-        try {
+        const data = await youtubedl(url, {
+            dumpSingleJson: true
+        })
 
-            const data = JSON.parse(stdout)
+        res.json({
+            status: true,
+            title: data.title,
+            thumbnail: data.thumbnail,
+            video: data.url
+        })
 
-            res.json({
-                status: true,
-                title: data.title,
-                thumbnail: data.thumbnail,
-                video: data.url
-            })
+    } catch (e) {
 
-        } catch {
+        res.json({
+            status: false,
+            error: e.toString()
+        })
 
-            res.json({
-                status: false,
-                message: "Gagal parse data"
-            })
-        }
+    }
 
-    })
+})
 
+app.get("/", (req, res) => {
+    res.send("API TikTok jalan")
 })
 
 const PORT = process.env.PORT || 3000
