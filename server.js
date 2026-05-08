@@ -7,10 +7,10 @@ const app = express()
 app.use(cors())
 
 app.get("/", (req, res) => {
-    res.send("API TikTok jalan")
+    res.send("Universal Downloader API jalan")
 })
 
-app.get("/tiktok", async (req, res) => {
+async function downloadMedia(req, res, platform) {
 
     const url = req.query.url
 
@@ -23,8 +23,8 @@ app.get("/tiktok", async (req, res) => {
 
     const id = Date.now()
 
-    const videoFile = `video_${id}.mp4`
-    const audioFile = `audio_${id}.mp3`
+    const videoFile = `${platform}_${id}.mp4`
+    const audioFile = `${platform}_${id}.mp3`
 
     exec(
         `yt-dlp -f "bv*+ba/b" --merge-output-format mp4 -o "${videoFile}" "${url}" && yt-dlp -x --audio-format mp3 -o "${audioFile}" "${url}"`,
@@ -39,13 +39,38 @@ app.get("/tiktok", async (req, res) => {
 
             res.json({
                 status: true,
-                video_hd: `https://${req.get("host")}/download/${videoFile}`,
-                mp3: `https://${req.get("host")}/download/${audioFile}`
+                platform: platform,
+
+                video_hd:
+                    `https://${req.get("host")}/download/${videoFile}`,
+
+                mp3:
+                    `https://${req.get("host")}/download/${audioFile}`
             })
 
         }
     )
 
+}
+
+app.get("/tiktok", async (req, res) => {
+    downloadMedia(req, res, "tiktok")
+})
+
+app.get("/instagram", async (req, res) => {
+    downloadMedia(req, res, "instagram")
+})
+
+app.get("/twitter", async (req, res) => {
+    downloadMedia(req, res, "twitter")
+})
+
+app.get("/capcut", async (req, res) => {
+    downloadMedia(req, res, "capcut")
+})
+
+app.get("/facebook", async (req, res) => {
+    downloadMedia(req, res, "facebook")
 })
 
 app.get("/download/:file", (req, res) => {
