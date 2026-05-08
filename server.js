@@ -46,8 +46,11 @@ app.get("/tiktok", async (req, res) => {
             thumbnail: result.data.cover,
 
             download: {
-                video: `https://tiktok-api-production-ff68.up.railway.app/video?url=${encodeURIComponent(video)}`,
-                audio: `https://tiktok-api-production-ff68.up.railway.app/audio?url=${encodeURIComponent(audio)}`
+                video:
+                    `https://tiktok-api-production-ff68.up.railway.app/video?url=${encodeURIComponent(video)}`,
+
+                audio:
+                    `https://tiktok-api-production-ff68.up.railway.app/audio?url=${encodeURIComponent(audio)}`
             }
         })
 
@@ -68,21 +71,28 @@ app.get("/video", async (req, res) => {
 
         const url = req.query.url
 
+        if (!url) {
+            return res.send("URL kosong")
+        }
+
         const response = await fetch(url, {
             headers: {
-                "User-Agent": "Mozilla/5.0"
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://www.tiktok.com/"
             }
         })
 
-        const buffer = Buffer.from(await response.arrayBuffer())
+        const arrayBuffer = await response.arrayBuffer()
 
-        res.setHeader("Content-Type", "video/mp4")
-        res.setHeader(
-            "Content-Disposition",
-            "inline; filename=tiktok.mp4"
-        )
+        const buffer = Buffer.from(arrayBuffer)
 
-        res.send(buffer)
+        res.writeHead(200, {
+            "Content-Type": "video/mp4",
+            "Content-Length": buffer.length,
+            "Content-Disposition": "inline; filename=tiktok.mp4"
+        })
+
+        res.end(buffer)
 
     } catch (e) {
 
@@ -101,21 +111,28 @@ app.get("/audio", async (req, res) => {
 
         const url = req.query.url
 
+        if (!url) {
+            return res.send("URL kosong")
+        }
+
         const response = await fetch(url, {
             headers: {
-                "User-Agent": "Mozilla/5.0"
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://www.tiktok.com/"
             }
         })
 
-        const buffer = Buffer.from(await response.arrayBuffer())
+        const arrayBuffer = await response.arrayBuffer()
 
-        res.setHeader("Content-Type", "audio/mpeg")
-        res.setHeader(
-            "Content-Disposition",
-            "inline; filename=tiktok.mp3"
-        )
+        const buffer = Buffer.from(arrayBuffer)
 
-        res.send(buffer)
+        res.writeHead(200, {
+            "Content-Type": "audio/mpeg",
+            "Content-Length": buffer.length,
+            "Content-Disposition": "inline; filename=tiktok.mp3"
+        })
+
+        res.end(buffer)
 
     } catch (e) {
 
