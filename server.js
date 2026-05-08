@@ -20,7 +20,7 @@ async function downloadMedia(url, type, req, res) {
     const audioFile = `/tmp/${type}_${id}.mp3`
 
     exec(
-        `yt-dlp -f "bv*+ba/b" --merge-output-format mp4 -o "${videoFile}" "${url}" && yt-dlp -x --audio-format mp3 -o "${audioFile}" "${url}"`,
+        `yt-dlp -f "bestvideo+bestaudio/best" --merge-output-format mp4 "${url}" -o "${videoFile}" && yt-dlp -x --audio-format mp3 "${url}" -o "${audioFile}"`,
         (err) => {
 
             if (err) {
