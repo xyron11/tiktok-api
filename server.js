@@ -1,42 +1,15 @@
 const express = require("express")
 const cors = require("cors")
-const FormData = require("form-data")
-const fs = require("fs")
-const path = require("path")
 
 const app = express()
 
 app.set("json spaces", 2)
 
 app.use(cors())
-app.use(express.json())
 
 app.get("/", (req, res) => {
     res.send("API TikTok jalan")
 })
-
-async function uploadCatbox(filePath) {
-
-    const form = new FormData()
-
-    form.append("reqtype", "fileupload")
-
-    form.append(
-        "fileToUpload",
-        fs.createReadStream(filePath)
-    )
-
-    const response = await fetch(
-        "https://catbox.moe/user/api.php",
-        {
-            method: "POST",
-            headers: form.getHeaders(),
-            body: form
-        }
-    )
-
-    return await response.text()
-}
 
 app.get("/tiktok", async (req, res) => {
 
@@ -64,32 +37,44 @@ app.get("/tiktok", async (req, res) => {
             })
         }
 
-        const videoUrl = result.data.hdplay || result.data.play
-
-        const videoResponse = await fetch(videoUrl)
-
-        const buffer = Buffer.from(
-            await videoResponse.arrayBuffer()
-        )
-
-        const filePath = path.join(
-            "/tmp",
-            `tiktok_${Date.now()}.mp4`
-        )
-
-        fs.writeFileSync(filePath, buffer)
-
-        const uploaded = await uploadCatbox(filePath)
-
-        fs.unlinkSync(filePath)
+        const video = result.data.hdplay || result.data.play
 
         res.json({
             status: true,
             title: result.data.title,
             thumbnail: result.data.cover,
-            original_video: videoUrl,
-            download: uploaded
+            download: `https://tiktok-api-production-ff68.up.railway.app/download?url=${encodeURIComponent(video)}`
         })
+
+    } catch (e) {
+
+        res.json({
+            status: false,
+            error: e.toString()
+        })
+
+    }
+
+})
+
+app.get("/download", async (req, res) => {
+
+    try {
+
+        const url = req.query.url
+
+        const response = await fetch(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0"
+            }
+        })
+
+        res.setHeader(
+            "Content-Disposition",
+            "attachment; filename=tiktok.mp4"
+        )
+
+        response.body.pipe(res)
 
     } catch (e) {
 
