@@ -13,70 +13,93 @@ app.get("/", (req, res) => {
     res.send("Multi Downloader API jalan")
 })
 
-async function downloadMedia(url, type, req, res) {
+function run(cmd) {
 
-    const id = Date.now()
+    return new Promise((resolve, reject) => {
 
-    const videoName = `${type}_${id}.mp4`
-    const audioName = `${type}_${id}.mp3`
+        exec(cmd, (err, stdout, stderr) => {
 
-    const videoFile = `/tmp/${videoName}`
-    const audioFile = `/tmp/${audioName}`
-
-    exec(
-        `yt-dlp -f "bestvideo+bestaudio/best" --merge-output-format mp4 -o "${videoFile}" "${url}" && yt-dlp -x --audio-format mp3 -o "${audioFile}" "${url}"`,
-        async (err) => {
-
-            const imageFolder = `/tmp/${type}_images_${id}`
-
-            if (!fs.existsSync(imageFolder)) {
-                fs.mkdirSync(imageFolder)
+            if (err) {
+                reject(stderr || err.toString())
+            } else {
+                resolve(stdout)
             }
 
-            exec(
-                `yt-dlp --write-all-thumbnails --skip-download -o "${imageFolder}/%(title)s.%(ext)s" "${url}"`,
-                () => {
+        })
 
-                    const images = []
+    })
 
-                    if (fs.existsSync(imageFolder)) {
+}
 
-                        const files = fs.readdirSync(imageFolder)
+async function downloader(url, platform, req, res) {
 
-                        files.forEach(file => {
+    try {
 
-                            if (
-                                file.endsWith(".jpg") ||
-                                file.endsWith(".jpeg") ||
-                                file.endsWith(".png") ||
-                                file.endsWith(".webp")
-                            ) {
-                                images.push(
-                                    `https://${req.get("host")}/file/${type}_images_${id}/${encodeURIComponent(file)}`
-                                )
-                            }
+        const id = Date.now()
 
-                        })
+        const folderName = `${platform}_${id}`
 
-                    }
+        const folder = `/tmp/${folderName}`
 
-                    res.json({
-                        status: true,
-                        platform: type,
-                        video_hd: fs.existsSync(videoFile)
-                            ? `https://${req.get("host")}/download/${videoName}`
-                            : null,
-                        mp3: fs.existsSync(audioFile)
-                            ? `https://${req.get("host")}/download/${audioName}`
-                            : null,
-                        images
-                    })
+        if (!fs.existsSync(folder)) {
+            fs.mkdirSync(folder, { recursive: true })
+        }
 
-                }
+        const videoPath = `${folder}/video.mp4`
+        const audioPath = `${folder}/audio.mp3`
+
+        await run(
+            `yt-dlp -f "bv*+ba/best" --merge-output-format mp4 -o "${videoPath}" "${url}"`
+        ).catch(() => {})
+
+        await run(
+            `yt-dlp -x --audio-format mp3 -o "${audioPath}" "${url}"`
+        ).catch(() => {})
+
+        await run(
+            `yt-dlp --write-all-thumbnails --skip-download -o "${folder}/thumb" "${url}"`
+        ).catch(() => {})
+
+        const files = fs.readdirSync(folder)
+
+        const images = files
+            .filter(v =>
+                v.endsWith(".jpg") ||
+                v.endsWith(".jpeg") ||
+                v.endsWith(".png") ||
+                v.endsWith(".webp")
+            )
+            .map(v =>
+                `https://${req.get("host")}/file/${folderName}/${encodeURIComponent(v)}`
             )
 
-        }
-    )
+        res.json({
+            status: true,
+            platform,
+
+            video_hd: fs.existsSync(videoPath)
+                ? `https://${req.get("host")}/download/${folderName}/video.mp4`
+                : null,
+
+            mp3: fs.existsSync(audioPath)
+                ? `https://${req.get("host")}/download/${folderName}/audio.mp3`
+                : null,
+
+            gallery: images.length > 0
+                ? `https://${req.get("host")}/gallery/${folderName}`
+                : null,
+
+            images
+        })
+
+    } catch (e) {
+
+        res.json({
+            status: false,
+            error: e.toString()
+        })
+
+    }
 
 }
 
@@ -91,7 +114,7 @@ app.get("/tiktok", async (req, res) => {
         })
     }
 
-    downloadMedia(url, "tiktok", req, res)
+    downloader(url, "tiktok", req, res)
 
 })
 
@@ -106,7 +129,7 @@ app.get("/instagram", async (req, res) => {
         })
     }
 
-    downloadMedia(url, "instagram", req, res)
+    downloader(url, "instagram", req, res)
 
 })
 
@@ -121,7 +144,7 @@ app.get("/facebook", async (req, res) => {
         })
     }
 
-    downloadMedia(url, "facebook", req, res)
+    downloader(url, "facebook", req, res)
 
 })
 
@@ -136,13 +159,13 @@ app.get("/twitter", async (req, res) => {
         })
     }
 
-    downloadMedia(url, "twitter", req, res)
+    downloader(url, "twitter", req, res)
 
 })
 
-app.get("/download/:file", (req, res) => {
+app.get("/download/:folder/:file", (req, res) => {
 
-    const filePath = `/tmp/${req.params.file}`
+    const filePath = `/tmp/${req.params.folder}/${req.params.file}`
 
     if (!fs.existsSync(filePath)) {
         return res.json({
@@ -155,9 +178,9 @@ app.get("/download/:file", (req, res) => {
 
 })
 
-app.get("/file/:folder/:name", (req, res) => {
+app.get("/file/:folder/:file", (req, res) => {
 
-    const filePath = path.join("/tmp", req.params.folder, req.params.name)
+    const filePath = `/tmp/${req.params.folder}/${req.params.file}`
 
     if (!fs.existsSync(filePath)) {
         return res.json({
@@ -166,7 +189,75 @@ app.get("/file/:folder/:name", (req, res) => {
         })
     }
 
-    res.sendFile(filePath)
+    res.sendFile(path.resolve(filePath))
+
+})
+
+app.get("/gallery/:folder", (req, res) => {
+
+    const folder = `/tmp/${req.params.folder}`
+
+    if (!fs.existsSync(folder)) {
+        return res.send("Folder tidak ditemukan")
+    }
+
+    const files = fs.readdirSync(folder)
+
+    const images = files.filter(v =>
+        v.endsWith(".jpg") ||
+        v.endsWith(".jpeg") ||
+        v.endsWith(".png") ||
+        v.endsWith(".webp")
+    )
+
+    let html = `
+    <html>
+    <head>
+        <title>Gallery</title>
+    </head>
+
+    <body style="background:black;color:white;text-align:center;font-family:sans-serif;">
+
+        <h1>Gallery</h1>
+    `
+
+    images.forEach(img => {
+
+        html += `
+        <div style="margin:20px;">
+
+            <img 
+                src="/file/${req.params.folder}/${img}" 
+                style="max-width:90%;border-radius:10px;"
+            >
+
+            <br><br>
+
+            <a 
+                href="/file/${req.params.folder}/${img}" 
+                download
+                style="
+                    background:white;
+                    color:black;
+                    padding:10px 20px;
+                    text-decoration:none;
+                    border-radius:10px;
+                "
+            >
+                Download
+            </a>
+
+        </div>
+        `
+
+    })
+
+    html += `
+    </body>
+    </html>
+    `
+
+    res.send(html)
 
 })
 
