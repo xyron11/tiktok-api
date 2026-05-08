@@ -57,7 +57,7 @@ async function downloader(url, platform, req, res) {
         ).catch(() => {})
 
         await run(
-            `yt-dlp --write-all-thumbnails --skip-download -o "${folder}/thumb" "${url}"`
+            `yt-dlp --write-all-thumbnails --skip-download -o "${folder}/image" "${url}"`
         ).catch(() => {})
 
         const files = fs.readdirSync(folder)
@@ -73,9 +73,20 @@ async function downloader(url, platform, req, res) {
                 `https://${req.get("host")}/file/${folderName}/${encodeURIComponent(v)}`
             )
 
+        let type = "unknown"
+
+        if (images.length > 0) {
+            type = "images"
+        }
+
+        if (fs.existsSync(videoPath)) {
+            type = "video"
+        }
+
         res.json({
             status: true,
             platform,
+            type,
 
             video_hd: fs.existsSync(videoPath)
                 ? `https://${req.get("host")}/download/${folderName}/video.mp4`
@@ -83,10 +94,6 @@ async function downloader(url, platform, req, res) {
 
             mp3: fs.existsSync(audioPath)
                 ? `https://${req.get("host")}/download/${folderName}/audio.mp3`
-                : null,
-
-            gallery: images.length > 0
-                ? `https://${req.get("host")}/gallery/${folderName}`
                 : null,
 
             images
@@ -190,74 +197,6 @@ app.get("/file/:folder/:file", (req, res) => {
     }
 
     res.sendFile(path.resolve(filePath))
-
-})
-
-app.get("/gallery/:folder", (req, res) => {
-
-    const folder = `/tmp/${req.params.folder}`
-
-    if (!fs.existsSync(folder)) {
-        return res.send("Folder tidak ditemukan")
-    }
-
-    const files = fs.readdirSync(folder)
-
-    const images = files.filter(v =>
-        v.endsWith(".jpg") ||
-        v.endsWith(".jpeg") ||
-        v.endsWith(".png") ||
-        v.endsWith(".webp")
-    )
-
-    let html = `
-    <html>
-    <head>
-        <title>Gallery</title>
-    </head>
-
-    <body style="background:black;color:white;text-align:center;font-family:sans-serif;">
-
-        <h1>Gallery</h1>
-    `
-
-    images.forEach(img => {
-
-        html += `
-        <div style="margin:20px;">
-
-            <img 
-                src="/file/${req.params.folder}/${img}" 
-                style="max-width:90%;border-radius:10px;"
-            >
-
-            <br><br>
-
-            <a 
-                href="/file/${req.params.folder}/${img}" 
-                download
-                style="
-                    background:white;
-                    color:black;
-                    padding:10px 20px;
-                    text-decoration:none;
-                    border-radius:10px;
-                "
-            >
-                Download
-            </a>
-
-        </div>
-        `
-
-    })
-
-    html += `
-    </body>
-    </html>
-    `
-
-    res.send(html)
 
 })
 
