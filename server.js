@@ -1,4 +1,3 @@
-
 const express = require("express")
 const cors = require("cors")
 const FormData = require("form-data")
@@ -21,16 +20,22 @@ async function uploadCatbox(filePath) {
     const form = new FormData()
 
     form.append("reqtype", "fileupload")
-    form.append("fileToUpload", fs.createReadStream(filePath))
 
-    const response = await fetch("https://catbox.moe/user/api.php", {
-        method: "POST",
-        body: form
-    })
+    form.append(
+        "fileToUpload",
+        fs.createReadStream(filePath)
+    )
 
-    const result = await response.text()
+    const response = await fetch(
+        "https://catbox.moe/user/api.php",
+        {
+            method: "POST",
+            headers: form.getHeaders(),
+            body: form
+        }
+    )
 
-    return result
+    return await response.text()
 }
 
 app.get("/tiktok", async (req, res) => {
@@ -46,7 +51,9 @@ app.get("/tiktok", async (req, res) => {
             })
         }
 
-        const response = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`)
+        const response = await fetch(
+            `https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`
+        )
 
         const result = await response.json()
 
@@ -61,9 +68,14 @@ app.get("/tiktok", async (req, res) => {
 
         const videoResponse = await fetch(videoUrl)
 
-        const buffer = Buffer.from(await videoResponse.arrayBuffer())
+        const buffer = Buffer.from(
+            await videoResponse.arrayBuffer()
+        )
 
-        const filePath = path.join("/tmp", `tiktok_${Date.now()}.mp4`)
+        const filePath = path.join(
+            "/tmp",
+            `tiktok_${Date.now()}.mp4`
+        )
 
         fs.writeFileSync(filePath, buffer)
 
